@@ -1,9 +1,9 @@
-﻿using IEEEOUIparser;
-using LiteDB;
+﻿using LiteDB;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
-namespace OuiIeeeParser
+namespace IEEEOUIparser
 {
     public class NetworkContext
     {
@@ -41,8 +41,8 @@ namespace OuiIeeeParser
         {
             using var db = new LiteDatabase(DbName);
             var col = db.GetCollection<OuiLookup>(Coll);
-            var results = col.FindAll();
-            return (IList<OuiLookup>)results;
+            var results = col.FindAll().ToList();
+            return results;
         }
 
         public OuiLookup Find(string x)

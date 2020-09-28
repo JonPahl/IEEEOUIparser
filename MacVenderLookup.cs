@@ -1,10 +1,9 @@
-﻿using IEEEOUIparser;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.RegularExpressions;
 
-namespace OuiIeeeParser
+namespace IEEEOUIparser
 {
     public class MacVenderLookup
     {
@@ -39,7 +38,8 @@ namespace OuiIeeeParser
                 item.Manufacturer = hex.Item3;
 
                 results.Add(item);
-                Console.Write($"Percent Processed {Math.Round(Convert.ToDecimal(results.Count) / hexValues.Count * 100, 2)} %");
+                var pct = Math.Round(Convert.ToDecimal(results.Count) / hexValues.Count * 100, 2);
+                Console.Write($"Percent Processed {pct:N} %");
                 Console.SetCursorPosition(0, 0);
             }
             return results;
@@ -54,7 +54,9 @@ namespace OuiIeeeParser
                 var mac = m.Groups[1].ToString();
                 var Organization = m.Groups[2].ToString();
 
-                matches.Add(new Tuple<string, string, string>(type, mac, Organization));
+                var manufacturer = Organization.Replace("\r\n", "  ").Replace("\r", "").Replace("\n", "");
+
+                matches.Add(new Tuple<string, string, string>(type, mac, manufacturer));
             }
 
             return matches;

@@ -1,50 +1,179 @@
-﻿using OuiIeeeParser;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace IEEEOUIparser
 {
     public static class Program
     {
         private static MacVenderLookup OuiImporter;
+        private static List<OuiLookup>[] pages;
 
         public static void Main()
         {
-            //var r = ctx.Find("6C-2B-59");
-            //Console.WriteLine(r.Manufacturer);
-
-            OuiImporter = new MacVenderLookup();
-            var Items = OuiImporter.ParseFile();
-            //StoreResults(Items); Make be a backgroundworker.
-            DisplayResults(Items);
+            try
+            {
+                OuiImporter = new MacVenderLookup();
+                var Items = OuiImporter.ParseFile();
+                Console.WriteLine("");
+                StoreNewResults(Items);
+                DisplayResults(Items, 50);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
         }
 
-        private static void DisplayResults(List<OuiLookup> Items)
+        private static void DisplayResults(List<OuiLookup> Items, int PageSize = 0)
         {
-            //todo: Add in Paging of results.
-            var table = Items.ToStringTable(
-                new[] { "ID", "HEX VALUE", "BASE 16 VALUE", "MANUFACTURER"},
-                a => a.Id, a => a.HexValue, a => a.Base16Value, a=>a.GetManufacturer()); //a => a.Manufacturer
+            string table = "";
+
+            if (PageSize.Equals(0))
+            {
+                table = Items.ToStringTable(
+                    new[] { "ID", "HEX VALUE", "BASE 16 VALUE", "MANUFACTURER" },
+                    a => a.Id, a => a.HexValue, a => a.Base16Value, a => a.GetManufacturer());
+
+                Console.Clear();
+                Console.SetCursorPosition(0, 0);
+                Console.WriteLine(table);
+            }
+            else if (PageSize > 0 && PageSize <= Items.Count)
+            {
+                pages = SplitList(Items, PageSize).ToArray();
+                var cnt = 1;
+
+                while (cnt != pages.Length - 1)
+                {
+                    if (cnt > 0 && cnt <= pages.Length - 1)
+                    {
+                        PrintDisplay(cnt);
+                        Console.WriteLine($"Enter for more results. page: {cnt} of {pages.Length-1}");
+                        
+                        switch (Console.ReadKey().Key)
+                        {
+                            case ConsoleKey.LeftArrow:
+                                cnt--;
+                                break;
+                            case ConsoleKey.RightArrow:
+                                cnt++;
+                                break;
+                            case ConsoleKey.Enter:
+                                cnt += 10;
+                                break;
+                            case ConsoleKey.Home:
+                                cnt = 1;
+                                break;
+                            case ConsoleKey.End:
+                                cnt = pages.Length-1;
+                                break;
+                            default:
+                                cnt++;
+                                break;
+                        }
+                        PrintDisplay(cnt);
+                    }
+                    else
+                    {
+                        var x = 0;
+                    }
+                    Thread.Sleep(500);
+                }
+            }
+            else
+            {
+                throw new Exception("Page Size is invalid, It must be greater than Zero or less than the size of the collection.");
+                Console.ReadLine();
+            }
+        }
+
+        private static void PrintDisplay(int cnt)
+        {
+            if(pages.Length <= cnt)
+            {
+                var x = 1;
+            }
+
+            var page = pages[cnt];
+
+            var table = page.ToStringTable(
+            new[] { "ID", "HEX VALUE", "BASE 16 VALUE", "MANUFACTURER" },
+            a => a.Id, a => a.HexValue, a => a.Base16Value, a => a.GetManufacturer());
+
             Console.Clear();
             Console.SetCursorPosition(0, 0);
             Console.WriteLine(table);
         }
 
-        private static void StoreResults(List<OuiLookup> Items)
+        private static void StoreAllResults(List<OuiLookup> Items)
         {
+            ProcessRecords(Items);
+        }
+
+        private static void StoreNewResults(List<OuiLookup> Items)
+        {
+            var missing = FindMissingValues(Items);
+            ProcessRecords(missing);
+        }
+
+        private static void ProcessRecords(List<OuiLookup> Items)
+        {
+            var added = 0;
+            var existing = 0;
             var ctx = new NetworkContext();
+
             foreach (var item in Items)
             {
                 try
                 {
-                    //Console.WriteLine($"{item.Id}: {item.HexValue}\t{item.Base16Value}\t{item.Manufacturer}");
+                    Console.SetCursorPosition(0, 2);
                     var r = ctx.Insert(item);
+                    Console.Write($"Records Added: {added:N0}");
+                    added++;
+                }
+                catch (LiteDB.LiteException ex)
+                {
+                    if (ex.Message.StartsWith("Cannot insert duplicate key in unique index '_id'."))
+                    {
+                        Console.SetCursorPosition(0, 3);
+                        Console.WriteLine($"Existing Record: {existing:N0}");
+                        existing++;
+                    }
+                    else
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
                 }
+                finally
+                {
+                    var totalProcessed = Convert.ToDecimal(added + existing);
+                    var pct = Math.Round((totalProcessed / Items.Count) * 100, 2);
+                    Console.SetCursorPosition(0, 4);
+                    Console.Write($"Percent Processed: {totalProcessed:N0}/{Items.Count:N0} \t\t {pct:N} %");
+                }
+            }
+        }
+
+        private static List<OuiLookup> FindMissingValues(List<OuiLookup> ouiLookups)
+        {
+            var ctx = new NetworkContext();
+
+            var stored = ctx.LoadAllOui().ToList();
+            var missing = stored.Where(x => ouiLookups.All(x2 => x2.HexValue != x.HexValue)).ToList();
+            return missing;
+        }
+
+        public static IEnumerable<List<T>> SplitList<T>(List<T> locations, int nSize = 30)
+        {
+            for (int i = 0; i < locations.Count; i += nSize)
+            {
+                yield return locations.GetRange(i, Math.Min(nSize, locations.Count - i));
             }
         }
     }
