@@ -39,6 +39,8 @@ namespace OuiIeeeParser
                 item.Manufacturer = hex.Item3;
 
                 results.Add(item);
+                Console.Write($"Percent Processed {Math.Round(Convert.ToDecimal(results.Count) / hexValues.Count * 100, 2)} %");
+                Console.SetCursorPosition(0, 0);
             }
             return results;
         }

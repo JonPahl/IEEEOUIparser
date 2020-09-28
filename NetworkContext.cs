@@ -19,15 +19,13 @@ namespace OuiIeeeParser
         public int Insert<T>(T item)
         {
             var x = item as OuiLookup;
-            using (var db = new LiteDatabase(DbName))
-            {
-                // Get a collection (or create, if doesn't exist)
-                var col = db.GetCollection<OuiLookup>(Coll);
+            using var db = new LiteDatabase(DbName);
+            // Get a collection (or create, if doesn't exist)
+            var col = db.GetCollection<OuiLookup>(Coll);
 
-                var result = col.Insert(x);
+            var result = col.Insert(x);
 
-                return Convert.ToInt32(result.RawValue);
-            }
+            return Convert.ToInt32(result.RawValue);
         }
 
         public int Update<T>(T item)
@@ -39,7 +37,6 @@ namespace OuiIeeeParser
             return Convert.ToInt32(result);
         }
 
-
         public IList<OuiLookup> LoadAllOui()
         {
             using var db = new LiteDatabase(DbName);
@@ -47,7 +44,6 @@ namespace OuiIeeeParser
             var results = col.FindAll();
             return (IList<OuiLookup>)results;
         }
-
 
         public OuiLookup Find(string x)
         {
@@ -57,6 +53,5 @@ namespace OuiIeeeParser
             var result = col.FindOne($"$.HexValue = '{x}'");
             return result;
         }
-
     }
 }
