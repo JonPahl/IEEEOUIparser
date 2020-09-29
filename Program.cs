@@ -51,7 +51,7 @@ namespace IEEEOUIparser
                     {
                         PrintDisplay(cnt);
                         Console.WriteLine($"Enter for more results. page: {cnt} of {pages.Length-1}");
-                        
+
                         switch (Console.ReadKey().Key)
                         {
                             case ConsoleKey.LeftArrow:
@@ -77,7 +77,7 @@ namespace IEEEOUIparser
                     }
                     else
                     {
-                        var x = 0;
+                        //var x = 0;
                     }
                     Thread.Sleep(500);
                 }
@@ -85,17 +85,11 @@ namespace IEEEOUIparser
             else
             {
                 throw new Exception("Page Size is invalid, It must be greater than Zero or less than the size of the collection.");
-                Console.ReadLine();
             }
         }
 
         private static void PrintDisplay(int cnt)
         {
-            if(pages.Length <= cnt)
-            {
-                var x = 1;
-            }
-
             var page = pages[cnt];
 
             var table = page.ToStringTable(
