@@ -1,56 +1,31 @@
 ﻿using LiteDB;
-using System;
+using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace IEEEOUIparser
 {
-    public class NetworkContext
-    {
-        protected string DbName { get; }
-        protected string Coll { get; set; }
+    public class NetworkContext : Abstract.ILiteDbContext
+    {        
+        public ILiteDatabase Database { get; set; }
+        private string CollectionName { get; set; }
 
-        public NetworkContext()
+        public NetworkContext(IOptions<LiteDbOptions> options)
         {
-            DbName = @"Filename=F:\Temp\NetworkData.db;Connection=shared;ReadOnly=false";
-            Coll = "Oui";
+            var location = options.Value.DatabaseLocation;
+            Database = new LiteDatabase(location);
+            CollectionName = "Oui";
         }
 
-        public int Insert<T>(T item)
+        public List<T> LoadAll<T>()
         {
-            var x = item as OuiLookup;
-            using var db = new LiteDatabase(DbName);
-            // Get a collection (or create, if doesn't exist)
-            var col = db.GetCollection<OuiLookup>(Coll);
-
-            var result = col.Insert(x);
-
-            return Convert.ToInt32(result.RawValue);
+            return Database.GetCollection<T>(CollectionName).FindAll().ToList();
         }
 
-        public int Update<T>(T item)
+        public bool Merge<T>(T item)
         {
-            var x = item as OuiLookup;
-            using var db = new LiteDatabase(DbName);
-            var col = db.GetCollection<OuiLookup>(Coll);
-            var result = col.Update(x);
-            return Convert.ToInt32(result);
-        }
-
-        public IList<OuiLookup> LoadAllOui()
-        {
-            using var db = new LiteDatabase(DbName);
-            var col = db.GetCollection<OuiLookup>(Coll);
-            var results = col.FindAll().ToList();
-            return results;
-        }
-
-        public OuiLookup Find(string x)
-        {
-            using var db = new LiteDatabase(DbName);
-            var col = db.GetCollection<OuiLookup>(Coll);
-
-            var result = col.FindOne($"$.HexValue = '{x}'");
+            var collection = Database.GetCollection<T>(CollectionName);
+            var result = collection.Upsert(item);
             return result;
         }
     }
