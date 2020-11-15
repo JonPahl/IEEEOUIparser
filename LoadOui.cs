@@ -1,4 +1,6 @@
 ﻿using IEEEOUIparser.Abstract;
+using IEEEOUIparser.Options;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,28 +12,32 @@ namespace IEEEOUIparser
     {
         public ILiteDbContext NetworkContext { get; set; }
 
-        private readonly MacVenderLookup OuiImporter;
-        private List<OuiLookup>[] pages;
+        private readonly IMacVenderLookup OuiImporter;
+        private List<OuiLookup>[] Pages { get; set; }
+        private SettingOptions Setting { get; }
 
-        public LoadOui(ILiteDbContext database)
+        public LoadOui(ILiteDbContext database,
+            IMacVenderLookup macVender,
+            IOptions<SettingOptions> setting)
         {
             NetworkContext = database;
-            OuiImporter = new MacVenderLookup();
+            OuiImporter = macVender;
+            Setting = setting.Value;
         }
 
         public void RunService()
         {
-            try
-            {
-                var Items = OuiImporter.ParseFile();
-                Console.WriteLine("");
-                StoreNewResults(Items);
-                DisplayResults(Items, 59);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
+            //try
+            //{
+            var Items = OuiImporter.ParseFile();
+            Console.WriteLine("");
+            StoreNewResults(Items);
+            DisplayResults(Items, Setting.PageSize);
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine(ex);
+            //}
         }
 
         private void DisplayResults(List<OuiLookup> Items, int PageSize = 0)
@@ -50,15 +56,15 @@ namespace IEEEOUIparser
             }
             else if (PageSize > 0 && PageSize <= Items.Count)
             {
-                pages = SplitList(Items, PageSize).ToArray();
+                Pages = SplitList(Items, PageSize).ToArray();
                 var cnt = 1;
 
-                while (cnt != pages.Length - 1)
+                while (cnt != Pages.Length - 1)
                 {
-                    if (cnt > 0 && cnt <= pages.Length - 1)
+                    if (cnt > 0 && cnt <= Pages.Length - 1)
                     {
                         PrintDisplay(cnt);
-                        Console.WriteLine($"Enter for more results. page: {cnt} of {pages.Length - 1}");
+                        Console.WriteLine($"Enter for more results. page: {cnt} of {Pages.Length - 1}");
 
                         switch (Console.ReadKey().Key)
                         {
@@ -75,17 +81,13 @@ namespace IEEEOUIparser
                                 cnt = 1;
                                 break;
                             case ConsoleKey.End:
-                                cnt = pages.Length - 1;
+                                cnt = Pages.Length - 1;
                                 break;
                             default:
                                 cnt++;
                                 break;
                         }
                         PrintDisplay(cnt);
-                    }
-                    else
-                    {
-                        //var x = 0;
                     }
                     Thread.Sleep(500);
                 }
@@ -98,7 +100,7 @@ namespace IEEEOUIparser
 
         private void PrintDisplay(int cnt)
         {
-            var page = pages[cnt];
+            var page = Pages[cnt];
 
             var table = page.ToStringTable(
             new[] { "ID", "HEX VALUE", "BASE 16 VALUE", "MANUFACTURER" },
@@ -109,10 +111,7 @@ namespace IEEEOUIparser
             Console.WriteLine(table);
         }
 
-        private void StoreAllResults(List<OuiLookup> Items)
-        {
-            ProcessRecords(Items);
-        }
+        // private void StoreAllResults(List<OuiLookup> Items) => ProcessRecords(Items);
 
         private void StoreNewResults(List<OuiLookup> Items)
         {
@@ -136,7 +135,8 @@ namespace IEEEOUIparser
                 }
                 catch (LiteDB.LiteException ex)
                 {
-                    if (ex.Message.StartsWith("Cannot insert duplicate key in unique index '_id'."))
+                    if (ex.Message
+                        .StartsWith("Cannot insert duplicate key in unique index '_id'."))
                     {
                         Console.SetCursorPosition(0, 3);
                         Console.WriteLine($"Existing Record: {existing:N0}");
@@ -164,7 +164,8 @@ namespace IEEEOUIparser
         private List<OuiLookup> FindMissingValues(List<OuiLookup> ouiLookups)
         {
             var stored = NetworkContext.LoadAll<OuiLookup>();
-            return ouiLookups.Where(x => stored.All(x2 => x2.HexValue != x.HexValue)).ToList();
+            return ouiLookups
+                .Where(x => stored.All(x2 => x2.HexValue != x.HexValue)).ToList();
         }
 
         public static IEnumerable<List<T>> SplitList<T>(List<T> locations, int nSize = 30)

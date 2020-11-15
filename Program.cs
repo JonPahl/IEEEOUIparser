@@ -1,37 +1,43 @@
-﻿using IEEEOUIparser.Abstract;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Serilog;
 using System;
 using System.IO;
-using System.Linq;
 
 namespace IEEEOUIparser
 {
     public static class Program
     {
         public static IConfigurationRoot configuration;
+        private static IServiceProvider serviceProvider;
+        private static Startup startup;
 
-        public static void Main(string[] args)
+        public static void Main()
         {
-            // Initialize serilog logger
-            Log.Logger = new LoggerConfiguration()
+            try
+            {
+                // Initialize serilog logger
+                Log.Logger = new LoggerConfiguration()
                  .WriteTo.Console(Serilog.Events.LogEventLevel.Debug)
                  .MinimumLevel.Debug()
                  .Enrich.FromLogContext()
                  .CreateLogger();
 
-            var services = new ServiceCollection();
-            ConfigureServices(services);
+                configuration = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
+                    .AddJsonFile("appsettings.json", false)
+                    .Build();
 
-            try
-            {
-                using ServiceProvider serviceProvider = services.BuildServiceProvider();
-                var LiteDbOptions = configuration.GetSection("LiteDbOptions").GetChildren().FirstOrDefault();
+                serviceProvider = RunSetup();
+                IApplicationBuilder appBuilder = new ApplicationBuilder(serviceProvider);
+                startup.Configure(appBuilder);
+
                 LoadOui app = serviceProvider.GetService<LoadOui>();
                 app.RunService();
-            } catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 Log.Fatal(ex.Message, ex);
             }
@@ -41,24 +47,12 @@ namespace IEEEOUIparser
             }
         }
 
-        private static void ConfigureServices(ServiceCollection services)
+        private static IServiceProvider RunSetup()
         {
-            services.AddSingleton<ILiteDbContext, NetworkContext>();
-            services.AddTransient<NetworkContext>();
-            services.AddTransient(x => new LoadOui(x.GetRequiredService<NetworkContext>()));
-            services.AddSingleton(LoggerFactory.Create(builder => builder.AddSerilog(dispose: true)));
-            services.AddLogging();
-
-            // Build configuration
-            configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetParent(AppContext.BaseDirectory).FullName)
-                .AddJsonFile("appsettings.json", false)
-                .Build();
-
-            // Add access to generic IConfigurationRoot
-            services.AddSingleton(configuration);
-
-            services.Configure<LiteDbOptions>(configuration.GetSection("LiteDbOptions"));
+            IServiceCollection services = new ServiceCollection();
+            startup = new Startup(configuration);
+            startup.ConfigureServices(services);
+            return services.BuildServiceProvider();
         }
     }
 }

@@ -1,27 +1,33 @@
-﻿using System;
+﻿using IEEEOUIparser.Exceptions;
+using IEEEOUIparser.Options;
+using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.RegularExpressions;
 
 namespace IEEEOUIparser
 {
-    public class MacVenderLookup
+    public class MacVenderLookup : IMacVenderLookup
     {
-        private readonly string OiuUrl = "http://standards-oui.ieee.org/oui/oui.txt";
+        private string OiuUrl { get; }
         private readonly RegexOptions options = RegexOptions.Multiline;
+        private string HexPattern { get; }
+        private string Base16Pattern { get; }
 
-        private readonly string HexPattern = @"([0-9A-F]{2}-[0-9A-F]{2}-[0-9A-F]{2})\s+\(hex\)\s+(.+)";
-        private readonly string Base16Pattern = @"([0-9A-F]{2}[0-9A-F]{2}[0-9A-F]{2})\s+\(base 16\)\s+(.+)";
+        public MacVenderLookup(IOptions<RegExOptions> Option,
+            IOptions<SettingOptions> Settings)
+        {
+            OiuUrl = Settings.Value.Url;
+            HexPattern = Option.Value.Hex;
+            Base16Pattern = Option.Value.Base16;
+        }
 
         public List<OuiLookup> ParseFile()
         {
             var results = new List<OuiLookup>();
-
-            var contents = "";
-            using (var wc = new WebClient())
-            {
-                contents = wc.DownloadString(OiuUrl);
-            }
+            //try {
+            var contents = LoadRemoteFile(OiuUrl);
 
             var hexValues = ParseLine(contents, HexPattern, "Hex");
             var baseValues = ParseLine(contents, Base16Pattern, "Base16");
@@ -29,7 +35,8 @@ namespace IEEEOUIparser
             foreach (var hex in hexValues)
             {
                 var base16Value = baseValues
-                    .Find(x => x.Item2 == hex.Item2.Replace("-", "") && x.Item3 == hex.Item3);
+                    .Find(x => x.Item2.Equals(hex.Item2.Replace("-", "")) &&
+                    x.Item3.Equals(hex.Item3));
 
                 var item = new OuiLookup();
                 item.Id = item.GetHashCode();
@@ -43,6 +50,24 @@ namespace IEEEOUIparser
                 Console.SetCursorPosition(0, 0);
             }
             return results;
+            //}
+            //catch (Exception ex)
+            //{
+            //    throw ex;
+            //}
+        }
+
+        private string LoadRemoteFile(string uri)
+        {
+            try
+            {
+                using var wc = new WebClient();
+                return wc.DownloadString(uri);
+            }
+            catch (Exception ex)
+            {
+                throw new GeneralException(ex.Message, ex);
+            }
         }
 
         private List<Tuple<string, string, string>> ParseLine(string line, string pattern, string type)
@@ -52,9 +77,9 @@ namespace IEEEOUIparser
             foreach (Match m in Regex.Matches(line, pattern, options))
             {
                 var mac = m.Groups[1].ToString();
-                var Organization = m.Groups[2].ToString();
+                var org = m.Groups[2].ToString();
 
-                var manufacturer = Organization.Replace("\r\n", "  ").Replace("\r", "").Replace("\n", "");
+                var manufacturer = org.Replace("\r\n", "  ").Replace("\r", "").Replace("\n", "");
 
                 matches.Add(new Tuple<string, string, string>(type, mac, manufacturer));
             }

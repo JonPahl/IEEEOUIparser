@@ -12,14 +12,8 @@ namespace IEEEOUIparser
 
         internal string GetManufacturer()
         {
-            if (this.Manufacturer != null)
-            {
-                var nw = Manufacturer.Replace("\r\n", "  ").Replace("\r", "").Replace("\n", "");
-                return nw;
-            } else
-            {
-                return "";
-            }
+            return (Manufacturer != null) ? 
+                Manufacturer.Replace("\r\n","  ").Replace("\r","").Replace("\n","") : "";
         }
     }
 }

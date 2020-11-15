@@ -1,4 +1,5 @@
-﻿using LiteDB;
+﻿using IEEEOUIparser.Options;
+using LiteDB;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,9 +7,9 @@ using System.Linq;
 namespace IEEEOUIparser
 {
     public class NetworkContext : Abstract.ILiteDbContext
-    {        
+    {
         public ILiteDatabase Database { get; set; }
-        private string CollectionName { get; set; }
+        private string CollectionName { get; }
 
         public NetworkContext(IOptions<LiteDbOptions> options)
         {
@@ -25,8 +26,7 @@ namespace IEEEOUIparser
         public bool Merge<T>(T item)
         {
             var collection = Database.GetCollection<T>(CollectionName);
-            var result = collection.Upsert(item);
-            return result;
+            return collection.Upsert(item);
         }
     }
 }
