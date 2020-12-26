@@ -42,9 +42,9 @@ namespace IEEEOUIparser.MiddleWare
         private static Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             const HttpStatusCode status = HttpStatusCode.InternalServerError;
-            string message = exception.Message;
-            var stackTrace = exception.StackTrace;
-            var exceptionType = exception.GetType();
+            string Message = exception.Message;
+            var StackTrace = exception.StackTrace;
+            var ExceptionType = exception.GetType();
 
             const string result = "";
 

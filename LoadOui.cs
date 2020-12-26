@@ -66,27 +66,9 @@ namespace IEEEOUIparser
                         PrintDisplay(cnt);
                         Console.WriteLine($"Enter for more results. page: {cnt} of {Pages.Length - 1}");
 
-                        switch (Console.ReadKey().Key)
-                        {
-                            case ConsoleKey.LeftArrow:
-                                cnt--;
-                                break;
-                            case ConsoleKey.RightArrow:
-                                cnt++;
-                                break;
-                            case ConsoleKey.Enter:
-                                cnt += 10;
-                                break;
-                            case ConsoleKey.Home:
-                                cnt = 1;
-                                break;
-                            case ConsoleKey.End:
-                                cnt = Pages.Length - 1;
-                                break;
-                            default:
-                                cnt++;
-                                break;
-                        }
+                        //todo: move to its own method.
+                        var key = Console.ReadKey().Key;
+                        cnt = KeyPaging(key, cnt);
                         PrintDisplay(cnt);
                     }
                     Thread.Sleep(500);
@@ -96,6 +78,34 @@ namespace IEEEOUIparser
             {
                 throw new Exception("Page Size is invalid, It must be greater than Zero or less than the size of the collection.");
             }
+        }
+
+
+        private int KeyPaging(ConsoleKey key, int cnt)
+        {
+            switch (key)
+            {
+                case ConsoleKey.LeftArrow:
+                    cnt--;
+                    break;
+                case ConsoleKey.RightArrow:
+                    cnt++;
+                    break;
+                case ConsoleKey.Enter:
+                    cnt += Setting.PageSize; //change to pageSize
+                    break;
+                case ConsoleKey.Home:
+                    cnt = 1;
+                    break;
+                case ConsoleKey.Escape:
+                case ConsoleKey.End:
+                    cnt = Pages.Length - 1;
+                    break;
+                default:
+                    cnt++;
+                    break;
+            }
+            return cnt;
         }
 
         private void PrintDisplay(int cnt)

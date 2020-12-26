@@ -18,10 +18,8 @@ namespace IEEEOUIparser
             CollectionName = "Oui";
         }
 
-        public List<T> LoadAll<T>()
-        {
-            return Database.GetCollection<T>(CollectionName).FindAll().ToList();
-        }
+        public List<T> LoadAll<T>() 
+            => Database.GetCollection<T>(CollectionName).FindAll().ToList();
 
         public bool Merge<T>(T item)
         {
