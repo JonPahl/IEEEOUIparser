@@ -10,13 +10,13 @@ namespace IEEEOUIparser
 {
     public class LoadOui
     {
-        public ILiteDbContext NetworkContext { get; set; }
+        public IContext NetworkContext { get; set; }
 
         private readonly IMacVenderLookup OuiImporter;
         private List<OuiLookup>[] Pages { get; set; }
         private SettingOptions Setting { get; }
 
-        public LoadOui(ILiteDbContext database,
+        public LoadOui(IContext database,
             IMacVenderLookup macVender,
             IOptions<SettingOptions> setting)
         {
@@ -27,17 +27,10 @@ namespace IEEEOUIparser
 
         public void RunService()
         {
-            //try
-            //{
             var Items = OuiImporter.ParseFile();
             Console.WriteLine("");
             StoreNewResults(Items);
             DisplayResults(Items, Setting.PageSize);
-            //}
-            //catch (Exception ex)
-            //{
-            //    Console.WriteLine(ex);
-            //}
         }
 
         private void DisplayResults(List<OuiLookup> Items, int PageSize = 0)
@@ -66,7 +59,6 @@ namespace IEEEOUIparser
                         PrintDisplay(cnt);
                         Console.WriteLine($"Enter for more results. page: {cnt} of {Pages.Length - 1}");
 
-                        //todo: move to its own method.
                         var key = Console.ReadKey().Key;
                         cnt = KeyPaging(key, cnt);
                         PrintDisplay(cnt);
@@ -79,7 +71,6 @@ namespace IEEEOUIparser
                 throw new Exception("Page Size is invalid, It must be greater than Zero or less than the size of the collection.");
             }
         }
-
 
         private int KeyPaging(ConsoleKey key, int cnt)
         {
@@ -121,12 +112,10 @@ namespace IEEEOUIparser
             Console.WriteLine(table);
         }
 
-        // private void StoreAllResults(List<OuiLookup> Items) => ProcessRecords(Items);
-
         private void StoreNewResults(List<OuiLookup> Items)
         {
-            var missing = FindMissingValues(Items);
-            ProcessRecords(missing);
+            //var missing = FindMissingValues(Items);
+            ProcessRecords(Items);
         }
 
         private void ProcessRecords(List<OuiLookup> Items)
@@ -145,8 +134,7 @@ namespace IEEEOUIparser
                 }
                 catch (LiteDB.LiteException ex)
                 {
-                    if (ex.Message
-                        .StartsWith("Cannot insert duplicate key in unique index '_id'."))
+                    if (ex.Message.StartsWith("Cannot insert duplicate key in unique index '_id'."))
                     {
                         Console.SetCursorPosition(0, 3);
                         Console.WriteLine($"Existing Record: {existing:N0}");
@@ -171,12 +159,12 @@ namespace IEEEOUIparser
             }
         }
 
+        /*
         private List<OuiLookup> FindMissingValues(List<OuiLookup> ouiLookups)
         {
             var stored = NetworkContext.LoadAll<OuiLookup>();
-            return ouiLookups
-                .Where(x => stored.All(x2 => x2.HexValue != x.HexValue)).ToList();
-        }
+            return ouiLookups.Where(x => stored.All(x2 => x2.HexValue != x.HexValue)).ToList();
+        }*/
 
         public static IEnumerable<List<T>> SplitList<T>(List<T> locations, int nSize = 30)
         {

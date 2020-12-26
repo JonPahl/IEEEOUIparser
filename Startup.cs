@@ -1,4 +1,5 @@
 ﻿using IEEEOUIparser.Abstract;
+using IEEEOUIparser.Context;
 using IEEEOUIparser.MiddleWare;
 using IEEEOUIparser.Options;
 using Microsoft.AspNetCore.Builder;
@@ -20,10 +21,11 @@ namespace IEEEOUIparser
         {
             // Configure your services here
 
-            services.AddSingleton<ILiteDbContext, NetworkContext>();
-            services.AddTransient<NetworkContext>();
+            services.AddSingleton<IContext, MongoDbContext>();
+            services.AddTransient<MongoDbContext>();
+
             services.AddTransient(x => new LoadOui(
-                x.GetRequiredService<NetworkContext>(),
+                x.GetRequiredService<MongoDbContext>(),
                 x.GetRequiredService<IMacVenderLookup>(),
                 x.GetRequiredService<IOptions<SettingOptions>>()
             ));
@@ -45,7 +47,6 @@ namespace IEEEOUIparser
             services.Configure<SettingOptions>(Configuration.GetSection("Settings"));
         }
 
-        public void Configure(IApplicationBuilder app)
-            => app.UseMiddleware(typeof(ErrorHandlingMiddleware));
+        public void Configure(IApplicationBuilder app) => app.UseMiddleware(typeof(ErrorHandlingMiddleware));
     }
 }
